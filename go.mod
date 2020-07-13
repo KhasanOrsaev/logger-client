@@ -1,4 +1,4 @@
-module github.com/KhasanOrsaev/logger
+module github.com/KhasanOrsaev/logger-client
 
 go 1.14
 
