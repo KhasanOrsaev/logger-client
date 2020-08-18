@@ -89,6 +89,7 @@ func TestInfoDefault(t *testing.T) {
 	for _, v := range dataTesting {
 		exitCode = nil
 		message = nil
+		NewLoggerDefault(map[string]interface{}{"level":5, "format": "json"})
 		Info(v.short, v.full, v.add, v.err)
 		//v.level = gelf.LOG_INFO
 		//analyzeResult(t, &loggerDefault, v, message, 0, timeStart)

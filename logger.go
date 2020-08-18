@@ -4,6 +4,7 @@ package logger
 
 import (
 	"github.com/sirupsen/logrus"
+	"io"
 	"os"
 	"time"
 )
@@ -11,6 +12,7 @@ import (
 const (
 	FormatDefault = "[%s] %s.%s message: %s context: %s extra: %s"
 	ModuleDefault = "default_module"
+	OutputDefault = "stdout"
 )
 
 type (
@@ -29,8 +31,14 @@ var (
 	doExit = func(code int) { os.Exit(code) }
 )
 
-// init инициализацирует атрибуты логгера по умолчаню, не зависящие от дальнейших настроек логгера
 func init() {
+	_,err := NewLoggerDefault(map[string]interface{}{})
+	if err != nil {
+		logrus.Fatal(err.Error())
+	}
+}
+// initFileDirectory инициализацирует атрибуты логгера по умолчаню, не зависящие от дальнейших настроек логгера
+func initFileDirectory() {
 	// если директории нет то создаем
 	if _, err := os.Stat("./var/log"); os.IsNotExist(err) {
 		err = os.MkdirAll("./var/log", os.ModePerm)
@@ -41,14 +49,21 @@ func init() {
 }
 
 // getResource получает новый экземпляр отправителя (транспорта) сообщений
-func getResource(module string, format string, level logrus.Level) (resource *logrus.Logger, err error) {
-	file, err := os.OpenFile("./var/log/" + module  + "_" + time.Now().Format("2006-01-02") + ".log",
-		os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
-	if err != nil {
-		return
+func getResource(output, module, format string, level logrus.Level) (resource *logrus.Logger, err error) {
+	var outputResource io.Writer
+	switch output {
+	case "file":
+		initFileDirectory()
+		outputResource, err = os.OpenFile("./var/log/" + module  + "_" + time.Now().Format("2006-01-02") + ".log",
+			os.O_CREATE | os.O_WRONLY | os.O_APPEND, 0666)
+		if err != nil {
+			return
+		}
+	case OutputDefault:
+		outputResource = os.Stdout
 	}
 	resource = &logrus.Logger{
-		Out:          file,
+		Out:          outputResource,
 		Hooks:        nil,
 		Formatter:    &logFormatter{format},
 		ReportCaller: false,
@@ -65,7 +80,7 @@ func NewLogger(
 	add map[string]interface{}, // Допонительные настройки логгера
 ) (*Logger, error) {
 	var err error
-    var module, format string
+    var module, format,output string
 	var level logrus.Level
 	if m,ok := add["module"];!ok {
 		module = ModuleDefault
@@ -82,7 +97,12 @@ func NewLogger(
 	} else {
 		level = logrus.Level(m.(int))
 	}
-	client, err := getResource(module, format, level)
+	if m,ok := add["output"];ok {
+		output = m.(string)
+	} else {
+		output = OutputDefault
+	}
+	client, err := getResource(output, module, format, level)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +119,7 @@ func NewLoggerDefault(
 	add map[string]interface{}, // Допонительные настройки логгера
 ) (*Logger, error) {
 	var err error
-	var module, format string
+	var module, format, output string
 	var level logrus.Level
 	if m,ok := add["module"];!ok {
 		module = ModuleDefault
@@ -116,7 +136,12 @@ func NewLoggerDefault(
 	} else {
 		level = logrus.Level(m.(int))
 	}
-	loggerDefault.Client, err = getResource(module, format, level)
+	if m,ok := add["output"];ok {
+		output = m.(string)
+	} else {
+		output = OutputDefault
+	}
+	loggerDefault.Client, err = getResource(output, module, format, level)
 	loggerDefault.eventAttributesCommon = map[string]interface{}{
 		"module": module,
 		"_pid":         os.Getpid(),
