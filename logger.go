@@ -86,19 +86,23 @@ func NewLogger(
 		module = ModuleDefault
 	} else {
 		module = m.(string)
+		delete(add, "module")
 	}
 	if m,ok := add["format"];!ok {
 		format = FormatDefault
 	} else {
 		format = m.(string)
+		delete(add, "format")
 	}
 	if m,ok := add["level"];!ok {
 		level = logrus.WarnLevel
+		delete(add, "level")
 	} else {
 		level = logrus.Level(m.(int))
 	}
 	if m,ok := add["output"];ok {
 		output = m.(string)
+		delete(add, "output")
 	} else {
 		output = OutputDefault
 	}
@@ -107,10 +111,7 @@ func NewLogger(
 		return nil, err
 	}
 
-	return &Logger{Client: client, eventAttributesCommon: map[string]interface{}{
-		"_pid":         os.Getpid(),
-		"module":      module,
-	}}, nil
+	return &Logger{Client: client, eventAttributesCommon: add}, nil
 }
 
 // NewLoggerDefault инициализирует логгер по умолчанию
@@ -125,27 +126,28 @@ func NewLoggerDefault(
 		module = ModuleDefault
 	} else {
 		module = m.(string)
+		delete(add, "module")
 	}
 	if m,ok := add["format"];!ok {
 		format = FormatDefault
 	} else {
 		format = m.(string)
+		delete(add, "format")
 	}
 	if m,ok := add["level"];!ok {
 		level = logrus.WarnLevel
+		delete(add, "level")
 	} else {
 		level = logrus.Level(m.(int))
 	}
 	if m,ok := add["output"];ok {
 		output = m.(string)
+		delete(add, "output")
 	} else {
 		output = OutputDefault
 	}
 	loggerDefault.Client, err = getResource(output, module, format, level)
-	loggerDefault.eventAttributesCommon = map[string]interface{}{
-		"module": module,
-		"_pid":         os.Getpid(),
-	}
+	loggerDefault.eventAttributesCommon = add
 	if err != nil {
 		return nil, err
 	}
